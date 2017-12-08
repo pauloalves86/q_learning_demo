@@ -1,6 +1,5 @@
 __author__ = 'philippe'
 import World
-import threading
 import time
 
 discount = 0.3
@@ -45,7 +44,7 @@ def do_action(action):
 def max_Q(s):
     val = None
     act = None
-    for a, q in Q[s].items():
+    for a, q in list(Q[s].items()):
         if val is None or (q > val):
             val = q
             act = a
@@ -58,36 +57,32 @@ def inc_Q(s, a, alpha, inc):
     World.set_cell_score(s, a, Q[s][a])
 
 
-def run():
-    global discount
-    time.sleep(1)
-    alpha = 1
-    t = 1
-    while True:
-        # Pick the right action
-        s = World.player
-        max_act, max_val = max_Q(s)
-        (s, a, r, s2) = do_action(max_act)
+alpha = 1
+t = 1
 
-        # Update Q
-        max_act, max_val = max_Q(s2)
-        inc_Q(s, a, alpha, r + discount * max_val)
+def run(window):
+    global discount, alpha, t
+    # Pick the right action
+    s = World.player
+    max_act, max_val = max_Q(s)
+    (s, a, r, s2) = do_action(max_act)
 
-        # Check if the game has restarted
-        t += 1.0
-        if World.has_restarted():
-            World.restart_game()
-            time.sleep(0.01)
-            t = 1.0
+    # Update Q
+    max_act, max_val = max_Q(s2)
+    inc_Q(s, a, alpha, r + discount * max_val)
 
-        # Update the learning rate
-        alpha = pow(t, -0.1)
+    # Check if the game has restarted
+    t += 1.0
+    if World.has_restarted():
+        World.restart_game()
+        time.sleep(0.01)
+        t = 1.0
 
-        # MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
-        time.sleep(0.1)
+    # Update the learning rate
+    alpha = pow(t, -0.1)
+
+    # MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
+    window.after(100, run, window)
 
 
-t = threading.Thread(target=run)
-t.daemon = True
-t.start()
-World.start_game()
+World.start_game(run)
